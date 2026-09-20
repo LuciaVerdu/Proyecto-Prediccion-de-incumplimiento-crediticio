@@ -25,7 +25,7 @@ Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito
 
 ## Notebook
 
-📓 [Ver notebook en Google Colab](https://colab.research.google.com/drive/1sosXUNJGE3o1gIdj4cum1IeWOeyv1bbP?usp=sharing)
+📓 [Ver notebook en Google Colab](https://colab.research.google.com/drive/1HMh71TmK13NA1yqRD9L6olMQakDYNoGO?usp=sharing)
 
 ## Estado del proyecto
 
