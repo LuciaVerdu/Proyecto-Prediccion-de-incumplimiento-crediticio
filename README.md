@@ -65,8 +65,8 @@ Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito
 
 ```
 ├── Modulo_Analista.ipynb                  # Notebook: EDA + limpieza + feature engineering + transformación
-├── Evidencia2_Entrega_Completa.pdf        # Entrega acumulativa: portada + informes ejecutivos (Ev.1 y Ev.2)
-│                                           # + anexos técnicos (Ev.1 y Ev.2) + recursos digitales
+├── Grupo7.pdf                             # Entrega acumulativa: portada + informes ejecutivos (Ev.1 y Ev.2)
+│                                          # + anexos técnicos (Ev.1 y Ev.2) + recursos digitales
 └── README.md
 ```
 
