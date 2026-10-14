@@ -15,9 +15,9 @@ Barbero, Maciel y Pratta, Nahuel
 
 ## Descripción del problema
 
-Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito reduciendo el riesgo de pérdidas económicas. Este proyecto desarrolla una **Prueba de Concepto (PoC)** para estimar la probabilidad de que un solicitante de crédito incumpla sus pagos, utilizando un modelo de **regresión logística**.
+Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito reduciendo el riesgo de pérdidas económicas. Este proyecto desarrolla una **Prueba de Concepto (PoC)** para estimar la probabilidad de que un solicitante de crédito incumpla sus pagos, comparando un modelo **Baseline (Regresión Logística)** con un modelo **Avanzado (LightGBM)**.
 
-**Pregunta de negocio:** ¿cómo podemos identificar anticipadamente clientes con mayor probabilidad de incumplir un crédito para mejorar la toma de decisiones del área de riesgo financiero?
+**Pregunta de negocio:** ¿Cómo podemos identificar anticipadamente clientes con mayor probabilidad de incumplir un crédito para mejorar la toma de decisiones del área de riesgo financiero?
 
 ## Dataset
 
@@ -33,7 +33,9 @@ Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito
 |---|---|---|
 | **Evidencia 1** | Comprensión del negocio, comprensión del dataset y análisis exploratorio (EDA) | ✅ Completa |
 | **Evidencia 2** | Limpieza de datos, ingeniería de características y transformación de variables | ✅ Completa |
-| **Evidencia 3** | Modelo baseline y desarrollo de la solución | ⏳ Pendiente |
+| **Evidencia 3** | Modelo baseline, modelo avanzado, evaluación y soluciones de negocio | ✅ Completa |
+
+---
 
 ## Contenido de la Evidencia 1
 
@@ -49,6 +51,8 @@ Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito
 - El **perfil socioeconómico** (educación, tipo de ingreso, ocupación) genera diferencias de hasta 6 veces en la tasa de default entre categorías.
 - Se detectaron problemas de calidad de datos a resolver antes de modelar: un valor centinela en `DAYS_EMPLOYED`, redundancia masiva en el bloque de variables de vivienda (63 pares de variables con correlación > 0.90), y variables casi constantes sin poder predictivo.
 
+---
+
 ## Contenido de la Evidencia 2
 
 - **Limpieza de datos:** tratamiento del valor centinela de `DAYS_EMPLOYED`, eliminación de variables redundantes, reducción del bloque de vivienda (47 → 12 variables), depuración de categorías anecdóticas y variables casi constantes, y tratamiento del outlier extremo en `AMT_INCOME_TOTAL` (capping al percentil 99).
@@ -58,22 +62,47 @@ Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito
 ### Principales decisiones (Evidencia 2)
 
 - **Imputación de `EXT_SOURCE_1/2/3`:** se descartó la imputación simple por mediana —por debilitar la variable más predictiva del dataset— en favor de **Iterative Imputer (MICE)**, usando como predictoras los otros scores externos y la antigüedad laboral.
-- **Criterio de equidad (Fairness):** se excluyó la variable edad (`YEARS_BIRTH`) de todo el pipeline de modelado, incluso como predictora en pasos de imputación, para evitar discriminación sistemática hacia clientes jóvenes. Se reserva en un conjunto separado (`train_audit_edad`) para una auditoría de sesgos en la Evidencia 3.
+- **Criterio de equidad (Fairness):** se excluyó la variable edad (`YEARS_BIRTH`) de todo el pipeline de modelado, incluso como predictora en pasos de imputación, para evitar discriminación sistemática hacia clientes jóvenes. Se reserva en un conjunto separado (`train_audit_edad`) para una auditoría de sesgos.
 - **Missing flags:** se conservaron indicadores binarios de ausencia de dato (`_FALTABA`, `SIN_EMPLEO_REGISTRADO`, `SIN_DATO_VIVIENDA`) allí donde el propio hecho de faltar el dato demostró tener relación con `TARGET`.
 
-## Estructura del repositorio
+---
 
-```
-├── Modulo_Analista.ipynb                  # Notebook: EDA + limpieza + feature engineering + transformación
-├── Grupo7.pdf                             # Entrega acumulativa: portada + informes ejecutivos (Ev.1 y Ev.2)
-│                                          # + anexos técnicos (Ev.1 y Ev.2) + recursos digitales
-└── README.md
-```
+## Contenido de la Evidencia 3
+
+- **Modelo Baseline (Regresión Logística):** construcción e implementación de un modelo lineal de referencia con balanceo de pesos (`class_weight='balanced'`) para gestionar la asimetría de la clase objetivo.
+- **Modelo Avanzado (LightGBM):** entrenamiento de un ensamble de árboles basado en *Gradient Boosting*, optimizado con ajuste para desbalance (`is_unbalance=True`) y sanitización de caracteres especiales en nombres de variables.
+- **Evaluación y Matriz de Costos de Negocio:** análisis comparativo de métricas (**ROC-AUC**, *Accuracy*, *Recall* y *Precision*) evaluando la respuesta de los modelos ante diferentes umbrales de decisión (estándar 0.50 vs. conservador 0.30/0.35).
+- **Interpretabilidad y Feature Importance:** análisis de las 15 características más determinantes para el modelo, identificando el impacto de las variables de buró crediticio (`EXT_SOURCE`) y los ratios financieros construidos.
+
+### Principales hallazgos y decisiones (Evidencia 3)
+
+- **Capacidad de discriminación:** el modelo **LightGBM (ROC-AUC = 0.7472)** superó al baseline de **Regresión Logística (ROC-AUC = 0.7408)**, capturando mejor las relaciones complejas e interacciones no lineales entre las variables.
+- **Gestión del riesgo mediante umbrales:** 
+  - Con un **umbral estándar (0.50)**, LightGBM alcanza una exactitud global del **70%** detectando el **65%** de los impagos reales sin penalizar en exceso a clientes cumplidores.
+  - Con un **umbral conservador (0.35)**, eleva la captura de morosos al **84%**, ofreciendo una alternativa estricta para etapas de contracción económica o prudencia de capital.
+- **Variables determinantes:** las calificaciones crediticias externas (`EXT_SOURCE_1/2/3`) y el esfuerzo financiero (`CUOTA_INGRESO_RATIO`) resultaron ser los motores de predicción principales del sistema.
+
+### Cuadro comparativo final
+
+| Modelo | ROC-AUC | Accuracy (Exactitud Global) | Recall Default (Captura de Morosos) | Precision Default (Certeza de Mora) |
+|---|:---:|:---:|:---:|:---:|
+| **Baseline: Regresión Logística (Umbral 0.50)** | 0.7408 | 68% | 68% | 16% |
+| **Baseline: Regresión Logística (Umbral 0.30)** | 0.7408 | 39% | 91% | 11% |
+| **Avanzado: LightGBM (Umbral 0.50)** | **0.7472** | **70%** | **65%** | **16%** |
+| **Avanzado: LightGBM (Umbral 0.35)** | **0.7472** | **52%** | **84%** | **13%** |
+
+---
+
+## Estructura del repositorio
+├── Modulo_Analista.ipynb            # Notebook: EDA + limpieza + feature engineering + modelado + evaluación
+├── Grupo7.pdf                       # Entrega acumulativa: informes ejecutivos + anexos técnicos (Ev. 1, 2 y 3)
+└── README.md                        # Documentación general del proyecto
+
 
 ## Tecnologías utilizadas
 
-- Python (pandas, numpy)
-- Preprocesamiento y modelado: scikit-learn (`IterativeImputer`, `StandardScaler`)
-- Visualización: matplotlib, seaborn
-- Entorno: Google Colab
-
+- **Lenguaje:** Python
+- **Manipulación de datos:** pandas, numpy
+- **Preprocesamiento y modelado:** scikit-learn (`IterativeImputer`, `StandardScaler`, `LogisticRegression`), LightGBM (`LGBMClassifier`)
+- **Visualización:** matplotlib, seaborn
+- **Entorno de desarrollo:** Google Colab
