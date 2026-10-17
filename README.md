@@ -11,17 +11,18 @@ Proyecto ABP desarrollado para la materia **Ciencia de Datos II - Estadística y
 
 ## Docentes
 
-Barbero, Maciel y Pratta, Nahuel
+- Barbero, Maciel
+- Pratta, Nahuel
 
 ## Descripción del problema
 
-Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito reduciendo el riesgo de pérdidas económicas. Este proyecto desarrolla una **Prueba de Concepto (PoC)** para estimar la probabilidad de que un solicitante de crédito incumpla sus pagos, comparando un modelo **Baseline (Regresión Logística)** con un modelo **Avanzado (LightGBM)**.
+Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito reduciendo el riesgo de pérdidas económicas. Este proyecto desarrolla una **Prueba de Concepto (PoC)** para estimar la probabilidad de que un solicitante de crédito incumpla sus pagos, comparando un modelo **Baseline (Regresión Logística)** contra un modelo **ABP (Regresión Logística Optimizada)** y un modelo de **Contraste (LightGBM)**.
 
 **Pregunta de negocio:** ¿Cómo podemos identificar anticipadamente clientes con mayor probabilidad de incumplir un crédito para mejorar la toma de decisiones del área de riesgo financiero?
 
 ## Dataset
 
-[Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk) (Kaggle, 2018). Se utiliza únicamente el archivo `application_train.csv`, que contiene información demográfica, laboral, económica y del préstamo solicitado, junto con la variable objetivo `TARGET` (0 = cliente cumplidor, 1 = default).
+[Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk) (Kaggle, 2018). Se utiliza el archivo `application_train.csv`, que contiene información demográfica, laboral, económica y del préstamo solicitado, junto con la variable objetivo `TARGET` (0 = cliente cumplidor, 1 = default).
 
 ## Notebook
 
@@ -33,76 +34,58 @@ Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito
 |---|---|---|
 | **Evidencia 1** | Comprensión del negocio, comprensión del dataset y análisis exploratorio (EDA) | ✅ Completa |
 | **Evidencia 2** | Limpieza de datos, ingeniería de características y transformación de variables | ✅ Completa |
-| **Evidencia 3** | Modelo baseline, modelo avanzado, evaluación y soluciones de negocio | ✅ Completa |
+| **Evidencia 3** | Multicolinealidad (VIF), baseline, optimización ABP (GridSearchCV), contraste (LightGBM) y conclusiones | ✅ Completa |
 
 ---
 
 ## Contenido de la Evidencia 1
 
 - **Comprensión del negocio:** contexto financiero, necesidad del stakeholder (Área de Riesgo Financiero) y Marco de Valor Esperado (costo de falsos negativos vs. falsos positivos).
-- **Comprensión del dataset:** inventario estructural (307.511 filas × 122 columnas), separación estratificada de train/test, diccionario de variables agrupado en 10 bloques temáticos, análisis de valores faltantes y distribución de la variable objetivo (desbalance de clases ~92% / ~8%).
-- **Análisis Exploratorio de Datos (EDA):** distribuciones, relación de cada variable con `TARGET`, análisis de correlaciones y detección de multicolinealidad, y recopilación de problemas de calidad de datos a resolver en la próxima etapa (valores centinela, nulos no aleatorios, outliers, variables redundantes).
+- **Comprensión del dataset:** inventario estructural (246.008 filas × 122 columnas en train), separación estratificada de test en cuarentena (`stratify=TARGET`), diccionario de variables agrupado en 10 bloques temáticos, análisis de valores faltantes y distribución de la variable objetivo (desbalance de clases ~92% / ~8%).
+- **Análisis Exploratorio de Datos (EDA):** preparación de variables (`YEARS_BIRTH`, `YEARS_EMPLOYED`), descripción por bloques, distribuciones, relación de cada variable con `TARGET`, análisis de correlaciones y problemas de calidad de datos.
 
 ### Principales hallazgos (Evidencia 1)
-
-- Fuerte desbalance de clases (11 clientes cumplidores por cada 1 en default), lo que descarta el *accuracy* como métrica principal de evaluación.
-- Los **scores externos** (`EXT_SOURCE_1/2/3`) son las variables con mayor relación con el riesgo, aunque también las que más datos faltantes tienen.
-- La **edad** y la **antigüedad laboral** muestran una relación clara e inversa con el riesgo de incumplimiento.
-- El **perfil socioeconómico** (educación, tipo de ingreso, ocupación) genera diferencias de hasta 6 veces en la tasa de default entre categorías.
-- Se detectaron problemas de calidad de datos a resolver antes de modelar: un valor centinela en `DAYS_EMPLOYED`, redundancia masiva en el bloque de variables de vivienda (63 pares de variables con correlación > 0.90), y variables casi constantes sin poder predictivo.
+- Fuerte desbalance de clases (91.93% cumplidores vs. 8.07% default), lo que descarta el *accuracy* como métrica principal de evaluación.
+- Los **scores externos** (`EXT_SOURCE_1/2/3`) son las variables con mayor capacidad de separación, aunque presentan nulos relevantes.
+- La **edad** y la **antigüedad laboral** muestran una relación clara e inversa con el riesgo de incumplimiento (los más jóvenes presentan mayor tasa de mora).
+- Se detectaron problemas clave a resolver: el valor centinela `365243` en `DAYS_EMPLOYED`, redundancia masiva en el bloque de vivienda (correlaciones > 0.96) y variables casi constantes.
 
 ---
 
 ## Contenido de la Evidencia 2
 
-- **Limpieza de datos:** tratamiento del valor centinela de `DAYS_EMPLOYED`, eliminación de variables redundantes, reducción del bloque de vivienda (47 → 12 variables), depuración de categorías anecdóticas y variables casi constantes, y tratamiento del outlier extremo en `AMT_INCOME_TOTAL` (capping al percentil 99).
-- **Ingeniería de características:** dos ratios de capacidad de pago (`CUOTA_INGRESO_RATIO`, `CREDITO_INGRESO_RATIO`) y un score combinado (`EXT_SOURCE_PROMEDIO`) que sintetiza los tres puntajes externos.
-- **Transformación de variables:** corrección logarítmica de variables monetarias, codificación de variables categóricas (One-Hot y Ordinal Encoding) y escalado con `StandardScaler`, ajustado exclusivamente sobre el conjunto de entrenamiento para evitar Data Leakage.
-
-### Principales decisiones (Evidencia 2)
-
-- **Imputación de `EXT_SOURCE_1/2/3`:** se descartó la imputación simple por mediana —por debilitar la variable más predictiva del dataset— en favor de **Iterative Imputer (MICE)**, usando como predictoras los otros scores externos y la antigüedad laboral.
-- **Criterio de equidad (Fairness):** se excluyó la variable edad (`YEARS_BIRTH`) de todo el pipeline de modelado, incluso como predictora en pasos de imputación, para evitar discriminación sistemática hacia clientes jóvenes. Se reserva en un conjunto separado (`train_audit_edad`) para una auditoría de sesgos.
-- **Missing flags:** se conservaron indicadores binarios de ausencia de dato (`_FALTABA`, `SIN_EMPLEO_REGISTRADO`, `SIN_DATO_VIVIENDA`) allí donde el propio hecho de faltar el dato demostró tener relación con `TARGET`.
+- **Limpieza de datos:** conversión definitiva del valor centinela de `DAYS_EMPLOYED` a `NaN` (creando la bandera `SIN_EMPLEO_REGISTRADO`), eliminación de variables redundantes (`FLAG_EMP_PHONE`, `ORGANIZATION_TYPE`), reducción del bloque de vivienda conservando únicamente la variante `_MEDI` (14 atributos), depuración de categorías anecdóticas y variables casi constantes, y recorte (*capping*) del valor extremo en `AMT_INCOME_TOTAL` al percentil 99.
+- **Criterio de equidad (Fairness):** se excluyó la edad (`YEARS_BIRTH` / `DAYS_BIRTH`) y el género (`CODE_GENDER`) del pipeline de modelado e imputación, reservándolos en `train_audit_fairness` para auditoría de sesgos.
+- **Imputación avanzadas e indicadores:** imputación de `EXT_SOURCE_1/2/3` mediante **Iterative Imputer (MICE)** conservando las banderas `_FALTABA`.
+- **Ingeniería de características:** ratios de capacidad de pago (`CUOTA_INGRESO_RATIO`, `CREDITO_INGRESO_RATIO`) y score promedio `EXT_SOURCE_PROMEDIO`.
+- **Transformación de variables:** transformación logarítmica `log(1+x)` en montos monetarios, codificación categórica (`OneHotEncoder` con `drop='first'` y Ordinal para educación) y escalado numérico con `StandardScaler`.
 
 ---
 
 ## Contenido de la Evidencia 3
 
-- **Modelo Baseline (Regresión Logística):** construcción e implementación de un modelo lineal de referencia con balanceo de pesos (`class_weight='balanced'`) para gestionar la asimetría de la clase objetivo.
-- **Modelo Avanzado (LightGBM):** entrenamiento de un ensamble de árboles basado en *Gradient Boosting*, optimizado con ajuste para desbalance (`is_unbalance=True`) y sanitización de caracteres especiales en nombres de variables.
-- **Evaluación y Matriz de Costos de Negocio:** análisis comparativo de métricas (**ROC-AUC**, *Accuracy*, *Recall* y *Precision*) evaluando la respuesta de los modelos ante diferentes umbrales de decisión (estándar 0.50 vs. conservador 0.30/0.35).
-- **Interpretabilidad y Feature Importance:** análisis de las 15 características más determinantes para el modelo, identificando el impacto de las variables de buró crediticio (`EXT_SOURCE`) y los ratios financieros construidos.
-
-### Principales hallazgos y decisiones (Evidencia 3)
-
-- **Capacidad de discriminación:** el modelo **LightGBM (ROC-AUC = 0.7472)** superó al baseline de **Regresión Logística (ROC-AUC = 0.7408)**, capturando mejor las relaciones complejas e interacciones no lineales entre las variables.
-- **Gestión del riesgo mediante umbrales:** 
-  - Con un **umbral estándar (0.50)**, LightGBM alcanza una exactitud global del **70%** detectando el **65%** de los impagos reales sin penalizar en exceso a clientes cumplidores.
-  - Con un **umbral conservador (0.35)**, eleva la captura de morosos al **84%**, ofreciendo una alternativa estricta para etapas de contracción económica o prudencia de capital.
-- **Variables determinantes:** las calificaciones crediticias externas (`EXT_SOURCE_1/2/3`) y el esfuerzo financiero (`CUOTA_INGRESO_RATIO`) resultaron ser los motores de predicción principales del sistema.
+- **Revisión de multicolinealidad (VIF):** cálculo del Factor de Inflación de la Varianza y eliminación de variables redundantes exactas (`CNT_FAM_MEMBERS`, `EXT_SOURCE_PROMEDIO`, `OBS_60_CNT_SOCIAL_CIRCLE`, `AMT_GOODS_PRICE_LOG` y `REGION_RATING_CLIENT`).
+- **División de datos (Train / Test Split):** partición estratificada del 80/20 sobre `train_clean` para evaluación interna (49.201 clientes en `X_test`).
+- **Entrenamiento Baseline:** Regresión Logística con `class_weight='balanced'` (ROC-AUC = 0.7392).
+- **Evaluación y Análisis de Umbrales:** evaluación del impacto en negocio al modificar el umbral de decisión (estándar 0.50 vs. estricto 0.30/0.35).
+- **Optimización ABP (GridSearchCV):** búsqueda de hiperparámetros (`C`, penalización L1/L2) obteniendo `C=0.01` y penalidad L2 como mejor configuración (ROC-AUC = 0.7391).
+- **Modelo de Contraste:** entrenamiento de `LightGBM` (ROC-AUC = 0.7448) demostrando que la ganancia técnica (+0.006) no justifica perder la interpretabilidad y auditabilidad de la Regresión Logística.
+- **Auditoría de Fairness y Recomendaciones:** evaluación de impacto dispar por género y tramos de edad.
 
 ### Cuadro comparativo final
 
-| Modelo | ROC-AUC | Accuracy (Exactitud Global) | Recall Default (Captura de Morosos) | Precision Default (Certeza de Mora) |
+| Modelo / Configuración | ROC-AUC | Recall Default (Captura Morosos) | Precision Default | % Clientes Rechazados |
 |---|:---:|:---:|:---:|:---:|
-| **Baseline: Regresión Logística (Umbral 0.50)** | 0.7408 | 68% | 68% | 16% |
-| **Baseline: Regresión Logística (Umbral 0.30)** | 0.7408 | 39% | 91% | 11% |
-| **Avanzado: LightGBM (Umbral 0.50)** | **0.7472** | **70%** | **65%** | **16%** |
-| **Avanzado: LightGBM (Umbral 0.35)** | **0.7472** | **52%** | **84%** | **13%** |
+| **Baseline: Regresión Logística (Umbral 0.50)** | 0.7392 | 67.7% | 15.6% | 35.0% |
+| **Baseline: Regresión Logística (Umbral 0.30)** | 0.7392 | 91.0% | 11.0% | 68.0% |
+| **Modelo Final ABP: Logística Optimizada (Umbral 0.50)** | **0.7391** | **68.0%** | **15.6%** | **35.1%** |
+| **Modelo Final ABP: Logística Optimizada (Umbral 0.35)** | **0.7391** | **85.8%** | **11.6%** | **59.7%** |
+| **Contraste: LightGBM (Umbral 0.50)** | 0.7448 | 66.8% | 16.0% | 33.7% |
+| **Contraste: LightGBM (Umbral 0.35)** | 0.7448 | 85.4% | 12.0% | 57.0% |
 
 ---
 
 ## Estructura del repositorio
-├── Modulo_Analista.ipynb            # Notebook: EDA + limpieza + feature engineering + modelado + evaluación
-├── Grupo7.pdf                       # Entrega acumulativa: informes ejecutivos + anexos técnicos (Ev. 1, 2 y 3)
-└── README.md                        # Documentación general del proyecto
-
-
-## Tecnologías utilizadas
-
-- **Lenguaje:** Python
-- **Manipulación de datos:** pandas, numpy
-- **Preprocesamiento y modelado:** scikit-learn (`IterativeImputer`, `StandardScaler`, `LogisticRegression`), LightGBM (`LGBMClassifier`)
-- **Visualización:** matplotlib, seaborn
-- **Entorno de desarrollo:** Google Colab
+├── Modulo_Analista.ipynb        # Notebook completo: EDA + Limpieza + Feature Engineering + VIF + Modelos
+├── Grupo7.pdf                  # Memoria técnica / Informe ejecutivo consolidado
+└── README.md                    # Documentación general del proyecto
