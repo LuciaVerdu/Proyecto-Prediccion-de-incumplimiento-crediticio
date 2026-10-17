@@ -1,6 +1,6 @@
 # Predicción de Incumplimiento Crediticio
 
-Proyecto ABP desarrollado para la materia **Ciencia de Datos II - Estadística y Exploración de Datos II**, Módulo Analista de Datos II, de la **Tecnicatura Superior en Ciencia de Datos e Inteligencia Artificial** - Instituto Superior Politécnico de Córdoba (ISPC).
+Proyecto ABP desarrollado para el módulo **Analista de Datos II** (Ciencia de Datos II y Estadística y Exploración de Datos II) de la **Tecnicatura Superior en Ciencia de Datos e Inteligencia Artificial** — Instituto Superior Politécnico de Córdoba (ISPC).
 
 ## Integrantes
 
@@ -16,13 +16,13 @@ Proyecto ABP desarrollado para la materia **Ciencia de Datos II - Estadística y
 
 ## Descripción del problema
 
-Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito reduciendo el riesgo de pérdidas económicas. Este proyecto desarrolla una **Prueba de Concepto (PoC)** para estimar la probabilidad de que un solicitante de crédito incumpla sus pagos, comparando un modelo **Baseline (Regresión Logística)** contra un modelo **ABP (Regresión Logística Optimizada)** y un modelo de **Contraste (LightGBM)**.
+Las entidades financieras enfrentan el desafío de evaluar la capacidad de pago de solicitantes de crédito, buscando minimizar las pérdidas por morosidad sin restringir excesivamente el otorgamiento a clientes solventes. Este proyecto desarrolla una **Prueba de Concepto (PoC)** basada en Machine Learning para estimar la probabilidad de incumplimiento (`TARGET`) al momento de la solicitud.
 
 **Pregunta de negocio:** ¿Cómo podemos identificar anticipadamente clientes con mayor probabilidad de incumplir un crédito para mejorar la toma de decisiones del área de riesgo financiero?
 
 ## Dataset
 
-[Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk) (Kaggle, 2018). Se utiliza el archivo `application_train.csv`, que contiene información demográfica, laboral, económica y del préstamo solicitado, junto con la variable objetivo `TARGET` (0 = cliente cumplidor, 1 = default).
+[Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk) (Kaggle). Se utiliza el archivo `application_train.csv`, que contiene información demográfica, laboral, económica y del préstamo solicitado, junto con la variable objetivo `TARGET` (0 = cliente cumplidor, 1 = default).
 
 ## Notebook
 
@@ -32,60 +32,94 @@ Las entidades financieras necesitan tomar decisiones de otorgamiento de crédito
 
 | Evidencia | Contenido | Estado |
 |---|---|---|
-| **Evidencia 1** | Comprensión del negocio, comprensión del dataset y análisis exploratorio (EDA) | ✅ Completa |
-| **Evidencia 2** | Limpieza de datos, ingeniería de características y transformación de variables | ✅ Completa |
-| **Evidencia 3** | Multicolinealidad (VIF), baseline, optimización ABP (GridSearchCV), contraste (LightGBM) y conclusiones | ✅ Completa |
+| **Evidencia 1** | Comprensión del negocio, comprensión del dataset y Análisis Exploratorio de Datos (EDA) | ✅ Completa |
+| **Evidencia 2** | Limpieza y preparación de datos, Ingeniería de características y Transformación de variables | ✅ Completa |
+| **Evidencia 3** | Revisión de multicolinealidad (VIF), Entrenamiento de modelos, Evaluación, Optimización y Conclusiones de negocio | ✅ Completa |
 
 ---
 
-## Contenido de la Evidencia 1
+## Contenido detallado por Evidencias
 
-- **Comprensión del negocio:** contexto financiero, necesidad del stakeholder (Área de Riesgo Financiero) y Marco de Valor Esperado (costo de falsos negativos vs. falsos positivos).
-- **Comprensión del dataset:** inventario estructural (246.008 filas × 122 columnas en train), separación estratificada de test en cuarentena (`stratify=TARGET`), diccionario de variables agrupado en 10 bloques temáticos, análisis de valores faltantes y distribución de la variable objetivo (desbalance de clases ~92% / ~8%).
-- **Análisis Exploratorio de Datos (EDA):** preparación de variables (`YEARS_BIRTH`, `YEARS_EMPLOYED`), descripción por bloques, distribuciones, relación de cada variable con `TARGET`, análisis de correlaciones y problemas de calidad de datos.
-
-### Principales hallazgos (Evidencia 1)
-- Fuerte desbalance de clases (91.93% cumplidores vs. 8.07% default), lo que descarta el *accuracy* como métrica principal de evaluación.
-- Los **scores externos** (`EXT_SOURCE_1/2/3`) son las variables con mayor capacidad de separación, aunque presentan nulos relevantes.
-- La **edad** y la **antigüedad laboral** muestran una relación clara e inversa con el riesgo de incumplimiento (los más jóvenes presentan mayor tasa de mora).
-- Se detectaron problemas clave a resolver: el valor centinela `365243` en `DAYS_EMPLOYED`, redundancia masiva en el bloque de vivienda (correlaciones > 0.96) y variables casi constantes.
+### **Evidencia 1**
+1. **Comprensión del negocio:** Análisis del contexto financiero, identificación de las necesidades del stakeholder (Área de Riesgo Financiero) y definición del Marco de Valor Esperado (costo asimétrico de Falsos Negativos vs. Falsos Positivos).
+2. **Comprensión del dataset:**
+   - 2.0 Configuración del entorno (`pandas`, `numpy`, `matplotlib`, `seaborn`).
+   - 2.1 Importación de datos (`application_train.csv` y diccionario de variables).
+   - 2.2 Inventario estructural (246.008 registros en train × 122 columnas).
+   - 2.3 Separación del test set en cuarentena (20% mantenido en reserva con `stratify=TARGET`).
+   - 2.4 Diccionario de variables curado en 10 bloques temáticos de negocio.
+   - 2.5 Análisis de valores faltantes (concentrados en un 68-70% en el bloque de vivienda).
+   - 2.6 Distribución de la variable objetivo (desbalance de clases: 91.93% cumplidores vs. 8.07% default).
+3. **Análisis Exploratorio de Datos (EDA):**
+   - 3.0 Preparación de variables (`YEARS_BIRTH` y `YEARS_EMPLOYED` en años positivos).
+   - 3.1 Descripción de los datos por bloques temáticos.
+   - 3.2 Distribuciones de las variables (asimetría en montos monetarios).
+   - 3.3 Relación de las variables con `TARGET` (análisis por tasa de default).
+   - 3.4 Correlaciones (identificación de predictores clave como `EXT_SOURCE_1/2/3`).
+   - 3.5 Problemas de calidad de datos (detección del valor centinela `365243` en antigüedad laboral y redundancias).
+4. **Conclusiones del EDA:** Resumen de patrones de riesgo y hoja de ruta para la preparación de datos.
 
 ---
 
-## Contenido de la Evidencia 2
-
-- **Limpieza de datos:** conversión definitiva del valor centinela de `DAYS_EMPLOYED` a `NaN` (creando la bandera `SIN_EMPLEO_REGISTRADO`), eliminación de variables redundantes (`FLAG_EMP_PHONE`, `ORGANIZATION_TYPE`), reducción del bloque de vivienda conservando únicamente la variante `_MEDI` (14 atributos), depuración de categorías anecdóticas y variables casi constantes, y recorte (*capping*) del valor extremo en `AMT_INCOME_TOTAL` al percentil 99.
-- **Criterio de equidad (Fairness):** se excluyó la edad (`YEARS_BIRTH` / `DAYS_BIRTH`) y el género (`CODE_GENDER`) del pipeline de modelado e imputación, reservándolos en `train_audit_fairness` para auditoría de sesgos.
-- **Imputación avanzadas e indicadores:** imputación de `EXT_SOURCE_1/2/3` mediante **Iterative Imputer (MICE)** conservando las banderas `_FALTABA`.
-- **Ingeniería de características:** ratios de capacidad de pago (`CUOTA_INGRESO_RATIO`, `CREDITO_INGRESO_RATIO`) y score promedio `EXT_SOURCE_PROMEDIO`.
-- **Transformación de variables:** transformación logarítmica `log(1+x)` en montos monetarios, codificación categórica (`OneHotEncoder` con `drop='first'` y Ordinal para educación) y escalado numérico con `StandardScaler`.
+### **Evidencia 2**
+5. **Limpieza y Preparación de Datos:**
+   - 5.1 Tratamiento del valor centinela `365243` en `DAYS_EMPLOYED` (conversión a `NaN` y creación del flag `SIN_EMPLEO_REGISTRADO`).
+   - 5.2 Eliminación de variables redundantes (`FLAG_EMP_PHONE` y `ORGANIZATION_TYPE`).
+   - 5.3 Reducción del bloque de vivienda (47 variables conservando únicamente la variante `_MEDI`).
+   - 5.4 Eliminación de filas con categorías anecdóticas (`CODE_GENDER = 'XNA'`, `NAME_FAMILY_STATUS = 'Unknown'`).
+   - 5.5 Eliminación de variables casi constantes (`FLAG_DOCUMENT_*` y `FLAG_MOBIL`) y del identificador `SK_ID_CURR`.
+   - 5.6 Tratamiento del valor extremo en `AMT_INCOME_TOTAL` (capping al percentil 99).
+   - 5.7 Exclusión de la variable edad (`YEARS_BIRTH` / `DAYS_BIRTH`) por criterio de equidad (*Fairness*) y reserva en `train_audit_fairness`.
+   - 5.8 Imputación de `EXT_SOURCE_1/2/3` mediante Iterative Imputer (MICE) y creación de missings flags (`_FALTABA`).
+   - 5.9 Tratamiento de nulos en el bloque de vivienda con la bandera `SIN_DATO_VIVIENDA` e imputación por mediana.
+   - 5.10 Manejo de categorías en `OCCUPATION_TYPE` ("Sin_dato") y `OWN_CAR_AGE` (imputado con 0).
+   - 5.11 Verificación final y tratamiento de nulos residuales.
+6. **Ingeniería de Características (Feature Engineering):**
+   - 6.1 y 6.2 Ratios de capacidad de pago (`CUOTA_INGRESO_RATIO`, `CREDITO_INGRESO_RATIO`).
+   - 6.3 Score combinado `EXT_SOURCE_PROMEDIO`.
+7. **Transformación de Variables:**
+   - 7.1 Transformación logarítmica `log(1+x)` de variables monetarias.
+   - 7.2 y 7.3 Codificación de variables categóricas (`OneHotEncoder` con `drop='first'` y `OrdinalEncoder` para educación).
+   - 7.4 Escalado de variables numéricas con `StandardScaler`.
+- **Síntesis de la Evidencia 2:** Balance de transformación del dataset (`train_clean` listo con 124 columnas y sin nulos).
 
 ---
 
-## Contenido de la Evidencia 3
+### **Evidencia 3**
+8. **Revisión de multicolinealidad antes del modelado:**
+   - 8.1 Factor de Inflación de la Varianza (VIF) en numéricas (eliminación de `CNT_FAM_MEMBERS`, `EXT_SOURCE_PROMEDIO`, `OBS_60_CNT_SOCIAL_CIRCLE`, `AMT_GOODS_PRICE_LOG` y `REGION_RATING_CLIENT`).
+   - 8.2 VIF en variables categóricas / dummies.
+   - 8.3 Conclusiones y selección final de características.
+9. **División del Conjunto de Datos (Train / Test Split):** Partición estratificada 80/20 sobre `train_clean` para evaluación interna (49.201 clientes en `X_test`).
+10. **Entrenamiento del Modelo Baseline - Regresión Logística:** Ajuste del modelo de referencia con `class_weight='balanced'`.
+11. **Evaluación del Modelo Baseline y Análisis de Umbrales:**
+    - 11.1 Qué mide el AUC-ROC y justificación de su elección frente a métricas sensibles al desbalance.
+    - 11.2 Análisis de umbrales (comparación de umbral estándar 0.50 vs. conservador 0.30/0.35).
+    - 11.3 Interpretación de resultados técnicos.
+    - 11.4 Criterios de negocio para la selección del umbral óptimo según el costo de error.
+12. **Optimización del Modelo Principal (Regresión Logística Optimizada):** Búsqueda de hiperparámetros con `GridSearchCV` (`C=0.01`, penalización L2) y prueba de modelo de contraste (`LightGBM`).
+13. **Interpretabilidad y Coeficientes del Modelo Final:** Análisis del efecto estandarizado de los coeficientes (impacto de `EXT_SOURCE_*`, ratios financieros y estabilidad laboral).
+14. **Cuadro Comparativo de Modelos y Decisión Técnica:** Evaluación comparativa del desempeño y selección del modelo ABP por su equilibrio entre capacidad predictiva y auditabilidad.
+15. **Conclusiones de Negocio y Recomendaciones Financieras:**
+    - Revisión de equidad por género y edad (auditoría de sesgo indirecto).
+    - Cierre del proyecto (síntesis CRISP-DM, limitaciones y recomendaciones de puesta en producción).
 
-- **Revisión de multicolinealidad (VIF):** cálculo del Factor de Inflación de la Varianza y eliminación de variables redundantes exactas (`CNT_FAM_MEMBERS`, `EXT_SOURCE_PROMEDIO`, `OBS_60_CNT_SOCIAL_CIRCLE`, `AMT_GOODS_PRICE_LOG` y `REGION_RATING_CLIENT`).
-- **División de datos (Train / Test Split):** partición estratificada del 80/20 sobre `train_clean` para evaluación interna (49.201 clientes en `X_test`).
-- **Entrenamiento Baseline:** Regresión Logística con `class_weight='balanced'` (ROC-AUC = 0.7392).
-- **Evaluación y Análisis de Umbrales:** evaluación del impacto en negocio al modificar el umbral de decisión (estándar 0.50 vs. estricto 0.30/0.35).
-- **Optimización ABP (GridSearchCV):** búsqueda de hiperparámetros (`C`, penalización L1/L2) obteniendo `C=0.01` y penalidad L2 como mejor configuración (ROC-AUC = 0.7391).
-- **Modelo de Contraste:** entrenamiento de `LightGBM` (ROC-AUC = 0.7448) demostrando que la ganancia técnica (+0.006) no justifica perder la interpretabilidad y auditabilidad de la Regresión Logística.
-- **Auditoría de Fairness y Recomendaciones:** evaluación de impacto dispar por género y tramos de edad.
+---
 
-### Cuadro comparativo final
+## Cuadro Comparativo de Modelos (Evidencia 3)
 
 | Modelo / Configuración | ROC-AUC | Recall Default (Captura Morosos) | Precision Default | % Clientes Rechazados |
 |---|:---:|:---:|:---:|:---:|
 | **Baseline: Regresión Logística (Umbral 0.50)** | 0.7392 | 67.7% | 15.6% | 35.0% |
 | **Baseline: Regresión Logística (Umbral 0.30)** | 0.7392 | 91.0% | 11.0% | 68.0% |
-| **Modelo Final ABP: Logística Optimizada (Umbral 0.50)** | **0.7391** | **68.0%** | **15.6%** | **35.1%** |
-| **Modelo Final ABP: Logística Optimizada (Umbral 0.35)** | **0.7391** | **85.8%** | **11.6%** | **59.7%** |
+| **Modelo Final: Logística Optimizada (Umbral 0.50)** | **0.7391** | **68.0%** | **15.6%** | **35.1%** |
+| **Modelo Final: Logística Optimizada (Umbral 0.35)** | **0.7391** | **85.8%** | **11.6%** | **59.7%** |
 | **Contraste: LightGBM (Umbral 0.50)** | 0.7448 | 66.8% | 16.0% | 33.7% |
 | **Contraste: LightGBM (Umbral 0.35)** | 0.7448 | 85.4% | 12.0% | 57.0% |
 
 ---
 
 ## Estructura del repositorio
-├── Modulo_Analista.ipynb        # Notebook completo: EDA + Limpieza + Feature Engineering + VIF + Modelos
-├── Grupo7.pdf                  # Memoria técnica / Informe ejecutivo consolidado
-└── README.md                    # Documentación general del proyecto
+├── Grupo_7_Modulo_Analista_2.ipynb   # Notebook ejecutable con las 3 Evidencias
+├── Grupo_7_Informe_Final.pdf         # Memoria técnica e informe ejecutivo del proyecto
+└── README.md                          # Documentación general del repositorio
